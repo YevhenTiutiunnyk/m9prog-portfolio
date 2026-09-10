@@ -1,10 +1,376 @@
-/**
- * Theme Name: My Portfolio
- * Description: My custom WordPress portfolio theme
- * Version: 0.0.1
- * Author: Yevhen Tiutiunnyk
- * Text Domain: my-portfolio
- * Tested up to: 6.5
- * Requires at least: 6.4
- * Requires PHP: 8.2
- */
+/*
+Theme Name: Yevhen Portfolio
+Theme URI: https://yevhent.com
+Author: Yevhen Tiutiunnyk
+Description: A minimal portfolio theme for internship applications.
+Version: 1.0.0
+Text Domain: yevhen-portfolio
+*/
+
+:root {
+  --background: #111315;
+  --surface: #191c20;
+  --surface-raised: #22262b;
+  --text: #f4f1ec;
+  --muted: #aab0b8;
+  --accent: #ff7a1a;
+  --accent-hover: #ff9a50;
+  --border: #363b43;
+  --max-width: 70rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.site-header,
+.site-footer,
+.section,
+.hero {
+  padding-inline: 1.25rem;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-wrap,
+.hero-content,
+.section-content,
+.footer-content {
+  width: min(100%, var(--max-width));
+  margin-inline: auto;
+}
+
+.nav-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.5rem;
+}
+
+.site-title {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.site-title span {
+  color: var(--accent);
+}
+
+.main-navigation ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.main-navigation a {
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.main-navigation a:hover {
+  color: var(--text);
+}
+
+.hero {
+  padding-top: 5.5rem;
+  padding-bottom: 4rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.eyebrow::before {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.1;
+}
+
+h1 {
+  max-width: 11ch;
+  margin-bottom: 1.5rem;
+  font-size: clamp(2.75rem, 12vw, 5.5rem);
+  letter-spacing: -0.07em;
+}
+
+h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.intro {
+  max-width: 38rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.button {
+  display: inline-flex;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent);
+  color: var(--background);
+  background: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.button:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.button--secondary {
+  color: var(--text);
+  background: transparent;
+}
+
+.button--secondary:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.section {
+  padding-top: 4.5rem;
+  padding-bottom: 4.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.section-heading {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.section-label {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 7vw, 3.25rem);
+  letter-spacing: -0.055em;
+}
+
+.about-copy {
+  max-width: 44rem;
+  color: var(--muted);
+}
+
+.about-copy strong {
+  color: var(--text);
+}
+
+.stack-list,
+.project-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stack-list li,
+.project-stack li {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.projects {
+  display: grid;
+  gap: 1rem;
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 17rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.project-number {
+  margin-bottom: auto;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.project-card h3 {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.035em;
+}
+
+.project-card p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.project-stack {
+  margin-top: 1.25rem;
+}
+
+.project-stack li {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.project-stack li + li::before {
+  margin-right: 0.55rem;
+  color: var(--accent);
+  content: "/";
+}
+
+.contact-panel {
+  padding: 1.5rem;
+  border-left: 4px solid var(--accent);
+  background: var(--surface-raised);
+}
+
+.contact-panel p {
+  max-width: 38rem;
+  margin-bottom: 1.5rem;
+  color: var(--muted);
+}
+
+.site-footer {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+@media (min-width: 42rem) {
+  .site-header,
+  .site-footer,
+  .section,
+  .hero {
+    padding-inline: 2rem;
+  }
+
+  .hero {
+    padding-top: 8rem;
+    padding-bottom: 6rem;
+  }
+
+  .section {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  .section-heading {
+    grid-template-columns: minmax(8rem, 1fr) 3fr;
+    align-items: start;
+  }
+
+  .section-label {
+    padding-top: 0.6rem;
+  }
+
+  .projects {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .project-card {
+    min-height: 23rem;
+  }
+
+  .contact-panel {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 2rem;
+  }
+
+  .contact-panel p {
+    margin-bottom: 0;
+  }
+}

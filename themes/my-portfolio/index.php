@@ -1,13 +1,16 @@
 <?php
+/**
+ * Required fallback template.
+ *
+ * @package YevhenPortfolio
+ */
 
 get_header();
-
-if (have_posts()) {
-    while (have_posts()) {
-        the_post();
-        the_content();
-    }
-}
-
-get_footer();
-
+?>
+<main id="main-content" class="section">
+	<div class="section-content">
+		<h1>Portfolio</h1>
+		<p>This theme uses a dedicated homepage template.</p>
+	</div>
+</main>
+<?php get_footer();
