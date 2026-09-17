@@ -1,98 +1,71 @@
-<?php
-/**
- * Homepage template.
- *
- * @package YevhenPortfolio
- */
+<?php get_header(); ?>
 
-get_header();
-?>
+<main id="main" class="site-main">
 
-<main id="main-content">
 	<section class="hero" aria-labelledby="hero-title">
-		<div class="hero-content">
-			<p class="eyebrow">Open to internships</p>
-			<h1 id="hero-title">Yevhen Tiutiunnyk, <em>FullStack Developer.</em></h1>
-			<p class="intro">I build clear, useful web experiences and enjoy turning ideas into reliable products. Based in Amsterdam.</p>
-			<div class="hero-actions">
-				<a class="button" href="#work">View selected work</a>
-				<a class="button button--secondary" href="#contact">Get in touch</a>
-			</div>
+		<div class="container">
+			<p class="status">
+				<span class="status__dot" aria-hidden="true"></span>
+				Open to internships
+			</p>
+			<h1 id="hero-title" class="hero__title">Yevhen Tiutiunnyk</h1>
+			<p class="hero__role">FullStack Developer · Amsterdam</p>
+			<a class="button" href="#work">View my work</a>
 		</div>
 	</section>
 
-	<section class="section" id="about" aria-labelledby="about-title">
-		<div class="section-content">
-			<div class="section-heading">
-				<p class="section-label">01 / About</p>
-				<div>
-					<h2 id="about-title">Building for people, learning every day.</h2>
-					<div class="about-copy">
-						<p>I am a third-year Software Development student at Mediacollege Amsterdam and a FullStack Developer looking for an internship.</p>
-						<p><strong>I care about useful interfaces, maintainable code and learning from real product teams.</strong> My work ranges from AI learning tools to automation and interactive promotional sites.</p>
-					</div>
-					<ul class="stack-list" aria-label="Technology stack">
-						<li>React</li>
-						<li>TypeScript</li>
-						<li>Node.js</li>
-						<li>Python</li>
-						<li>Laravel</li>
-					</ul>
-				</div>
+	<section id="about" class="section" aria-labelledby="about-title">
+		<div class="container">
+			<h2 id="about-title" class="section__title">About</h2>
+			<p>
+				I'm a third-year Software Development student at Mediacollege Amsterdam
+				and a FullStack developer. I build real products end to end, from
+				interfaces to APIs and bots, and I'm looking for an internship.
+			</p>
+
+			<h3 class="subheading">Tech stack</h3>
+			<ul class="tag-list">
+				<li>React</li>
+				<li>TypeScript</li>
+				<li>Node.js</li>
+				<li>Python</li>
+				<li>Laravel</li>
+			</ul>
+		</div>
+	</section>
+		<section id="work" class="section" aria-labelledby="work-title">
+		<div class="container">
+			<h2 id="work-title" class="section__title">Selected Work</h2>
+
+			<div class="project-grid">
+				<?php foreach ( yevhen_get_projects() as $project ) : ?>
+					<article class="project-card">
+						<h3 class="project-card__title"><?php echo esc_html( $project['title'] ); ?></h3>
+						<p class="project-card__text"><?php echo esc_html( $project['description'] ); ?></p>
+
+						<ul class="tag-list" aria-label="Technologies used">
+							<?php foreach ( $project['stack'] as $tech ) : ?>
+								<li><?php echo esc_html( $tech ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					</article>
+				<?php endforeach; ?>
 			</div>
+		</div>
+	</section>
+		<section id="contact" class="section" aria-labelledby="contact-title">
+		<div class="container">
+			<h2 id="contact-title" class="section__title">Contact</h2>
+			<p>Looking for an intern who ships real projects? Let's talk.</p>
+
+			<address class="contact">
+				<a class="button" href="mailto:yevhen.tuk@gmail.com">Email me</a>
+				<a class="contact__link" href="https://github.com/YevhenTiutiunnyk">GitHub</a>
+				<a class="contact__link" href="https://www.linkedin.com/in/yevhen-tiutiunnyk-a733012b3/">LinkedIn</a>
+			</address>
 		</div>
 	</section>
 
-	<section class="section" id="work" aria-labelledby="work-title">
-		<div class="section-content">
-			<div class="section-heading">
-				<p class="section-label">02 / Selected work</p>
-				<h2 id="work-title">Projects with a practical purpose.</h2>
-			</div>
-			<div class="projects">
-				<article class="project-card">
-					<span class="project-number" aria-hidden="true">01</span>
-					<h3>AI Helper SD</h3>
-					<p>An AI tutor that helps Software Development students learn and work through problems.</p>
-					<ul class="project-stack" aria-label="Technologies used">
-						<li>React</li><li>Express</li><li>Groq LLM</li>
-					</ul>
-				</article>
-				<article class="project-card">
-					<span class="project-number" aria-hidden="true">02</span>
-					<h3>Storefront Bot</h3>
-					<p>A multilingual Telegram bot for product catalogues and order placement.</p>
-					<ul class="project-stack" aria-label="Technologies used">
-						<li>Python</li><li>aiogram</li><li>SQLAlchemy</li>
-					</ul>
-				</article>
-				<article class="project-card">
-					<span class="project-number" aria-hidden="true">03</span>
-					<h3>Spoor / Spår</h3>
-					<p>A promotional site for a 2D + 3D puzzle platformer.</p>
-					<ul class="project-stack" aria-label="Technologies used">
-						<li>HTML</li><li>CSS</li><li>JavaScript</li>
-					</ul>
-				</article>
-			</div>
-		</div>
-	</section>
-
-	<section class="section" id="contact" aria-labelledby="contact-title">
-		<div class="section-content">
-			<div class="section-heading">
-				<p class="section-label">03 / Contact</p>
-				<div class="contact-panel">
-					<div>
-						<h2 id="contact-title">Let&rsquo;s build something useful.</h2>
-						<p>I am currently open to internship opportunities in Amsterdam and would be glad to talk about how I can contribute to your team.</p>
-					</div>
-					<a class="button" href="https://yevhent.com">Visit yevhent.com</a>
-				</div>
-			</div>
-		</div>
-	</section>
 </main>
 
-<?php
-get_footer();
+<?php get_footer(); ?>
