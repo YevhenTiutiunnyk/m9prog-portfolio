@@ -91,3 +91,122 @@ with a 1200×900 screenshot of the local theme itself — the size WordPress rec
 2. **.env was committed to Git.** The ignore file was named `gitignore` (without the dot),
    so Git ignored nothing. Fix: renamed it to `.gitignore` and removed `.env` from Git
    with `git rm --cached .env` (the local file stays).
+
+# AI log — Les 3: custom theme structureren
+
+## Used AI
+Claude (explanations of the template hierarchy and enqueueing, VS Code troubleshooting,
+review of my files). I wrote the PHP myself.
+
+## 1. Enqueueing styles and scripts
+
+`functions.php` already loaded `style.css` with `wp_enqueue_style()` from les 2.
+This lesson I added `wp_enqueue_script()` for a new `assets/js/main.js`.
+
+Why enqueueing instead of a hard-coded `<link>` / `<script>` in header.php:
+WordPress collects every request from the theme, plugins and core into one registry and
+prints them at `wp_head()` / `wp_footer()`. That gives deduplication (two plugins asking
+for jQuery get one copy), dependency order (3rd parameter), and the `?ver=` cache busting
+I already ran into in les 2.
+
+Two parameters I had to think about:
+- `get_stylesheet_uri()` points to the **active** theme, `get_template_directory_uri()`
+  to the **parent** theme. With a child theme those are different folders.
+- The last parameter of `wp_enqueue_script()` is `true`, which moves the `<script>` to the
+  footer. A script in `<head>` blocks HTML parsing; in the footer the page renders first.
+
+## 2. add_theme_support( 'post-thumbnails' )
+
+Added inside `yevhen_setup()`, which runs on the `after_setup_theme` hook — that is required,
+it does not work at file top level.
+
+Effect:
+1. A **Featured image** panel appears in the editor sidebar. I saw this immediately when I
+   created my first page: before this line the box simply does not exist, it is not hidden.
+2. `the_post_thumbnail()`, `has_post_thumbnail()` and `get_the_post_thumbnail_url()` become
+   usable in my templates.
+
+It takes an optional second argument (an array of post types) to limit it. With no second
+argument it applies to posts and pages. Enabling it does not resize images that were already
+uploaded — WordPress generates the registered sizes at upload time.
+
+## 3. Templates and the template hierarchy
+
+Created `page.php`. I copied `index.php` and removed the `is_singular()` branch: `index.php`
+serves both a single post and a list of posts, but `page.php` only ever serves one page, so
+only the `<h1>` version of `the_title()` is needed. The Loop itself stays — `the_post()` is
+what sets up the global post object, so without it `the_title()` and `the_content()` have
+nothing to read.
+
+Both templates got a temporary test heading so I could see which file WordPress chose.
+
+Which template is used:
+
+| Request | Chain WordPress walks | Winner in my theme |
+|---|---|---|
+| Homepage (static page) | `front-page.php` → `page-{slug}.php` → `page-{id}.php` → `page.php` → `singular.php` → `index.php` | `front-page.php` |
+| Normal page (Over mij) | `page-over-mij.php` → `page-{id}.php` → `page.php` → `singular.php` → `index.php` | `page.php` |
+
+The important part: `front-page.php` always wins for the homepage, whether Settings → Reading
+is set to "latest posts" or to a static page. Both my pages are Pages in the database and both
+are `is_page()` — the hierarchy decides, not the content type.
+
+In WordPress I made a `Home` page and an `Over mij` page, and set Settings → Reading to
+"A static page" with Home as homepage and Posts page empty.
+
+## Tested
+
+### 1. Homepage uses front-page.php
+- Expected: `http://localhost` shows "TEST: front-page.php".
+- Actual: HTTP 200, "TEST: front-page.php" is in the HTML.
+- Error: no.
+
+### 2. Normal page uses page.php
+- Expected: `http://localhost/over-mij/` shows "TEST: page.php" and my own page text.
+- Actual: HTTP 200, "TEST: page.php" is rendered and `the_content()` outputs the text I typed
+  in the editor.
+- Error: no.
+
+### 3. Fallback in the hierarchy
+- Expected: if `front-page.php` does not exist, the homepage falls through to the next file
+  in the chain, `page.php`.
+- Actual: I renamed `front-page.php` to `front-page.php.off` and reloaded `http://localhost`.
+  The homepage then showed "TEST: page.php". After renaming the file back, the homepage used
+  `front-page.php` again.
+- Error: no. This is the clearest proof that the hierarchy is a chain and not a single lookup.
+
+### 4. Enqueued assets
+- Expected: both pages load `style.css` and `main.js` with a `?ver=` from the theme header.
+- Actual: both pages load `style.css?ver=0.1.1` and `main.js?ver=0.1.1`.
+- Error: no.
+
+### 5. PHP syntax
+- Expected: no syntax errors.
+- Actual: `php -l` on all six PHP files: no errors.
+
+## Something I noticed
+
+The text I typed into the `Home` page does not appear on the homepage. That is not a bug:
+`front-page.php` never calls `the_content()`, it renders my hardcoded hero, about, work and
+contact sections. `page.php` does call `the_content()`, so on Over mij my text does show.
+Same content field in the database, two templates, one uses it and one ignores it.
+
+## Issues and fixes
+
+1. **All WordPress functions underlined yellow in VS Code.** Same symptom as les 1, but a
+   different cause, so the les 1 fix did not help. In les 1 the squiggles were red and I fixed
+   them by adding `wordpress` to `intelephense.stubs`. This time the warnings came from a
+   **second** PHP language server: besides Intelephense I also have DEVSense PHP Tools
+   installed. Both analyse every `.php` file, and PHP Tools does not read `intelephense.stubs`.
+   It resolves symbols from files in the workspace, and WordPress core is in Docker, not in my
+   project folder — so it reported every WordPress function as unknown, at warning severity.
+   Fix: added `.vscode/settings.json` with `"php.problems.exclude": true`, which turns off
+   PHP Tools' diagnostics and leaves Intelephense as the only analyser. 15 warnings → 0.
+   Lesson: the same symptom can have a different cause, and one fix is analyser-specific.
+2. **Indentation.** `page.php` was copied from `index.php`, which uses tabs, but my new test
+   heading is indented with spaces. Cosmetic only, still open.
+
+## Still to do
+- Remove the two temporary `TEST:` headings once the lesson is checked.
+- Rewrite the Over mij text in my own words (it is still partly AI-drafted), same open point
+  as the About text from les 2.

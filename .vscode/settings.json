@@ -1,0 +1,8 @@
+{
+  // Two PHP language servers are installed (Intelephense + DEVSense PHP Tools).
+  // Both analyse every .php file, so every WordPress function was reported twice.
+  // Intelephense knows WordPress via its "wordpress" stub; PHP Tools does not,
+  // because WordPress core lives in Docker, not in this workspace.
+  // Silence PHP Tools' diagnostics and let Intelephense be the only analyser.
+  "php.problems.exclude": true
+}

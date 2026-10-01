@@ -13,6 +13,9 @@ function yevhen_setup() {
 
 	// Output modern HTML5 markup for core elements.
 	add_theme_support( 'html5', array( 'search-form', 'style', 'script' ) );
+
+	add_theme_support( 'post-thumbnails' );
+	
 }
 add_action( 'after_setup_theme', 'yevhen_setup' );
 
@@ -22,6 +25,13 @@ function yevhen_enqueue_assets() {
 		get_stylesheet_uri(),                // URL of style.css
 		array(),
 		wp_get_theme()->get( 'Version' )     // ?ver=0.1.0 → cache busting
+	);
+	wp_enqueue_script(
+		'yevhen-script',
+		get_template_directory_uri() . '/assets/js/main.js',
+		array(),
+		wp_get_theme()->get( 'Version' ),
+		true
 	);
 }
 add_action( 'wp_enqueue_scripts', 'yevhen_enqueue_assets' );
