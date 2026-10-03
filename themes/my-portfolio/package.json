@@ -1,0 +1,38 @@
+{
+  "name": "yevhen-portfolio",
+  "version": "0.0.1",
+  "description": "My wordpress portfolio theme",
+  "keywords": [
+    "WordPress",
+    "website"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "github.com:YevhenTiutiunnyk/m9prog-portfolio.git"
+  },
+  "license": "ISC",
+  "author": "Yevhen Tiutiunnyk",
+  "type": "commonjs",
+  "main": "src/js/main.js",
+  "scripts": {
+    "webpack": "webpack",
+    "dev": "webpack build --mode=development",
+    "watch": "webpack watch --mode=development",
+    "prod": "webpack build --mode=production --stats=errors-only"
+  },
+  "dependencies": {
+    "@popperjs/core": "^2.11.8",
+    "bootstrap": "^5.3.8",
+    "copy-webpack-plugin": "^14.0.0"
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.5",
+    "css-minimizer-webpack-plugin": "^8.0.0",
+    "mini-css-extract-plugin": "^2.10.2",
+    "sass": "^1.103.1",
+    "sass-loader": "^17.0.1",
+    "webpack": "^5.110.3",
+    "webpack-cli": "^7.2.3",
+    "webpack-remove-empty-scripts": "^1.1.1"
+  }
+}

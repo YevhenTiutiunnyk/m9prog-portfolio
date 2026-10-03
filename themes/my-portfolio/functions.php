@@ -22,13 +22,13 @@ add_action( 'after_setup_theme', 'yevhen_setup' );
 function yevhen_enqueue_assets() {
 	wp_enqueue_style(
 		'yevhen-style',
-		get_stylesheet_uri(),                // URL of style.css
+		get_template_directory_uri() . '/dist/css/main.min.css',  // URL of style.css
 		array(),
 		wp_get_theme()->get( 'Version' )     // ?ver=0.1.0 → cache busting
 	);
 	wp_enqueue_script(
 		'yevhen-script',
-		get_template_directory_uri() . '/assets/js/main.js',
+		get_template_directory_uri() . '/dist/js/main.min.js',  // URL of main.js
 		array(),
 		wp_get_theme()->get( 'Version' ),
 		true

@@ -348,3 +348,174 @@ the footer markup, which confirms it.
   still open from les 2.
 - Move the Tech stack list and the projects array out of the theme files so I can edit them
   in wp-admin.
+
+# AI log — Les 5: Sass, npm en Webpack
+
+## Used AI
+Claude (explanation of the build chain and the `!default` mechanism, review of my files,
+checking the compiled CSS and the rendered HTML). I wrote the Sass and the PHP myself.
+`package.json` and `webpack.config.js` come from the examples provided with the lesson;
+I adjusted the fields.
+
+## What this lesson changed
+
+Until now my CSS lived in `style.css` and the browser read it directly. Now my source lives
+in `src/scss/` and `src/js/`, Webpack compiles it to `dist/`, and only `dist/` is enqueued.
+`style.css` still exists but holds nothing except the theme header — WordPress identifies a
+theme by that comment block, so deleting it would make the theme disappear from wp-admin.
+
+```
+themes/my-portfolio/
+├── package.json          dependencies + scripts
+├── webpack.config.js     build configuration
+├── style.css             theme header only
+├── src/                  what I edit
+│   ├── js/main.js
+│   └── scss/main.scss, _variables.scss, _theme.scss
+└── dist/                 generated, never edited by hand
+```
+
+## 1. npm
+
+`npm install` read `package.json` and installed 211 packages into `node_modules/`
+(0 vulnerabilities). Bootstrap 5.3.8.
+
+- `dependencies` = code that ends up in the browser (bootstrap, @popperjs/core).
+- `devDependencies` = only needed to build (webpack, sass, the loaders).
+- `package-lock.json` pins the exact resolved versions, so the build is reproducible on
+  another machine. It belongs in git; `node_modules/` (77 MB) does not.
+
+Two things that caught me out:
+- The `name` field in the example was `"Voorbeeld site"`, which is not a valid npm package
+  name — no spaces and no capitals are allowed. Changed it to `yevhen-portfolio`.
+- The lesson text mentions `npm run build`, but the scripts in the example `package.json` are
+  `dev`, `watch` and `prod`. I used `npm run prod`.
+
+## 2. Webpack
+
+Webpack takes an entry file, follows every import and writes a bundle. Loaders transform
+files on the way through: `sass-loader` compiles Sass to CSS, `css-loader` resolves `@import`
+and `url()`, and `MiniCssExtractPlugin` writes the result to a real `.css` file instead of
+injecting it with JavaScript.
+
+One thing in the given config confused me until I understood it: `main.scss` is used as an
+*entry point*, but Webpack entries are JavaScript by definition, so this produces a pointless
+empty `main.js` next to the CSS. That is exactly why `webpack-remove-empty-scripts` is in the
+plugin list.
+
+The config builds two sets at once: unminified (`main.css`, `main.js`) and minified
+(`main.min.css`, `main.min.js`). Output: 237 KB raw CSS, 227 KB minified, 86 bytes of JS.
+
+## 3. Bootstrap via Sass, and the !default rule
+
+This is the part that actually matters. Bootstrap declares all its variables like this:
+
+```scss
+$primary: #0d6efd !default;
+```
+
+`!default` means "use this value **only if** the variable does not already have one". So the
+order of imports decides everything:
+
+```scss
+@import "variables";                  // my values first
+@import "bootstrap/scss/bootstrap";   // bootstrap builds from them
+@import "theme";                      // my own rules last
+```
+
+Set before Bootstrap → Bootstrap skips its own value and builds every button, link and badge
+from my colour. Set after → too late, Bootstrap has already computed everything from blue.
+
+My overrides in `_variables.scss` (no `!default`, so mine win):
+
+| Variable | Value | Covers |
+|---|---|---|
+| `$body-bg` | `#0b1020` | colour |
+| `$body-color` | `#ededed` | colour |
+| `$primary` | `#ff7a1a` | colour |
+| `$font-family-base` | my system font stack | typography |
+| `$border-radius` | `12px` | — |
+| `$spacer` | `1rem` | spacing |
+
+Verified in the compiled output:
+
+```
+--bs-primary:#ff7a1a; --bs-body-bg:#0b1020; --bs-border-radius:12px;
+--bs-body-font-family:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+```
+
+(There is a second `--bs-body-bg:#212529` further down, that is Bootstrap's
+`[data-bs-theme="dark"]` block, not a mistake.)
+
+## 4. The opdracht: a different background
+
+My old `_theme.scss` still had `body { background: var(--color-bg); ... }`, and because my
+own partial is imported *after* Bootstrap, that rule won. `$body-bg` was set correctly but had
+no visible effect at all.
+
+Fix: removed `background`, `color` and `font-family` from that `body` rule and let Bootstrap's
+variables supply them. Only then is `_variables.scss` really in control. After that, changing
+`$body-bg` from `#0e0e10` to `#0b1020` and rebuilding visibly changed the site.
+
+## Tested
+
+### 1. Build runs
+- Expected: `npm run prod` compiles without errors and fills `dist/`.
+- Actual: build succeeded, `dist/css/main.css`, `dist/css/main.min.css`, `dist/js/main.js`
+  and `dist/js/main.min.js` created.
+- Error: no.
+
+### 2. My variables reach the compiled CSS
+- Expected: Bootstrap's generated custom properties use my values, not its defaults.
+- Actual: `--bs-primary:#ff7a1a`, `--bs-body-bg:#0b1020`, `--bs-border-radius:12px` and my
+  font stack are all present in `dist/css/main.min.css`.
+- Error: no.
+
+### 3. Only compiled files are enqueued
+- Expected: the page loads `dist/css/main.min.css` and `dist/js/main.min.js`, and no longer
+  the old `style.css` or `assets/js/main.js`.
+- Actual: both are loaded with `?ver=0.2.1`, both return HTTP 200.
+- Error: yes, first time. See below.
+
+### 4. Background actually changed
+- Expected: the site shows the new navy background instead of near-black.
+- Actual: after rebuilding and bumping the version, the served CSS contains
+  `--bs-body-bg:#0b1020` and the page shows it.
+- Error: no.
+
+### 5. Production build without a dev server
+- Expected: the site works from the compiled files alone, with no webpack dev server running.
+- Actual: homepage and Over mij both return HTTP 200 with the production build. There is no
+  dev server anywhere in the setup — WordPress serves the static files from `dist/`.
+- Error: no.
+
+## Issues and fixes
+
+1. **Broken stylesheet URL — the site had no CSS at all.** I wrote
+   `get_stylesheet_uri() . '/dist/css/main.min.css'`. `get_stylesheet_uri()` returns the URL
+   **of the style.css file itself**, filename included, not the folder. So the result was
+   `.../my-portfolio/style.css/dist/css/main.min.css` → HTTP 404.
+   Fix: `get_template_directory_uri()`, which returns the theme *folder* — exactly what I had
+   already used correctly on the line below for the script.
+   What makes this one worth remembering: PHP reported nothing, because string concatenation
+   cannot fail, and the line looked fine. Only the rendered HTML showed the problem.
+2. **`body` rule overriding my Sass variable.** Described above — the variable was right, my
+   own CSS was simply louder. Fix: delete the competing declarations.
+3. **Caching, again, but worse.** The output filename `main.min.css` never changes between
+   builds, so without bumping the theme Version the browser keeps the old file forever. Third
+   lesson in a row this has cost me time. Version is now 0.2.1.
+4. **New workflow to get used to.** Editing `src/scss/` changes nothing until I run
+   `npm run prod`. The browser never sees my Sass, only `dist/`. `npm run watch` recompiles
+   automatically while working.
+
+## Git
+`node_modules/` stays out of the repo (77 MB, already in `.gitignore`). `dist/` **is**
+committed (464 KB): the live server has no Node and runs no build, so the compiled files have
+to travel with the theme.
+
+## Still to do
+- Remove the two temporary `TEST:` headings once les 3 and 4 are checked.
+- `wp_nav_menu()` and `bloginfo( 'name' )` for the header — open since les 2.
+- The whole of Bootstrap is compiled in, while I use almost none of its components. Importing
+  only the parts I need would cut the 227 KB a lot.
+- My own CSS and Bootstrap now partly do the same work. Worth cleaning up.
