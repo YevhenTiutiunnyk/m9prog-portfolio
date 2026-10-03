@@ -4,7 +4,7 @@ Theme URI: https://yevhent.com
 Author: Yevhen Tiutiunnyk
 Author URI: https://yevhent.com
 Description: Minimal portfolio theme for internship applications.
-Version: 0.1.1
+Version: 0.1.2
 Requires at least: 6.0
 Requires PHP: 7.4
 License: GNU General Public License v2 or later
@@ -253,6 +253,13 @@ a {
 	color: var(--color-muted);
 	font-size: 0.875rem;
 }
+
+.page-thumbnail img, .post-thumbnail img {
+	max-width: 100%;
+	height: auto;
+}
+
+
 
 @media (min-width: 48rem) {
 	.site-nav ul {

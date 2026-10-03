@@ -210,3 +210,141 @@ Same content field in the database, two templates, one uses it and one ignores i
 - Remove the two temporary `TEST:` headings once the lesson is checked.
 - Rewrite the Over mij text in my own words (it is still partly AI-drafted), same open point
   as the About text from les 2.
+
+# AI log — Les 4: header, footer en loops
+
+## Used AI
+Claude (explanation of the Loop and featured images, review of my files, checking the
+rendered HTML). I wrote the PHP myself.
+
+## What already existed
+
+`header.php` with `wp_head()`, `body_class()` and a navigation, and `footer.php` with
+`wp_footer()`, were already finished in les 1 and 2, and all three templates already used
+`get_header()` and `get_footer()`. So this lesson was mainly about the Loop and about making
+the content actually come from WordPress instead of from hardcoded HTML.
+
+## 1. The Loop
+
+```php
+if ( have_posts() ) :
+    while ( have_posts() ) : the_post();
+        // the "current post" exists here
+    endwhile;
+endif;
+```
+
+`the_post()` is the part that matters. WordPress has already run the main query before my
+template loads. `the_post()` takes the next result and puts it in a global variable, and every
+tag starting with `the_` or `get_the_` reads from that global. That is why `the_title()` works
+without any arguments — it is not magic, it reads what `the_post()` set up.
+
+## 2. Featured image
+
+`the_post_thumbnail( 'large' )` is just another tag reading the same global. It prints a
+complete `<img>` with `srcset`, so the browser can pick a smaller file on a phone. The output
+I checked:
+
+```
+class="attachment-large size-large wp-post-image" width="1024" height="768" srcset=...
+```
+
+The `size-large` class confirms WordPress served the 1024px version it generated at upload,
+not the original file.
+
+Two things I had to handle:
+- **Guard with `has_post_thumbnail()`.** Without an image `the_post_thumbnail()` prints
+  nothing, but my wrapper `<div class="page-thumbnail">` would still be printed — empty markup
+  and broken spacing.
+- **CSS.** WordPress bakes `width` and `height` attributes into the tag at the real pixel size,
+  so without `max-width: 100%; height: auto;` a large image breaks out of the container on a
+  phone.
+
+The featured image only works because of `add_theme_support( 'post-thumbnails' )` from les 3.
+
+## 3. Dynamic content on the homepage
+
+`front-page.php` had no Loop at all, it only printed hardcoded HTML, so the text I typed into
+the Home page in WordPress was ignored. I replaced the hardcoded About paragraph with a Loop
+and `the_content()`.
+
+This works because on a static front page the main query **is** that Home page, so
+`have_posts()` is true and `the_post()` sets up the Home page as the current post.
+
+Gotcha: I removed the `<p>` wrapper instead of putting `the_content()` inside it. The block
+editor already outputs `<p>` around each paragraph, so `<p><p>text</p></p>` would have been
+invalid HTML. I checked the rendered source: the output is a single
+`<p class="wp-block-paragraph">`, no nesting.
+
+This also let me finally replace the AI-written About text with my own, which was still an
+open point from les 2.
+
+## 4. Footer
+
+Added contact information (email, GitHub, LinkedIn) next to the copyright line, and moved the
+whole Contact section out of `front-page.php` into `footer.php`. Now contact details appear on
+every page instead of only the homepage, and there is no duplicate `id="contact-title"`.
+
+`wp_footer()` stays the last thing before `</body>`. That is the hook where WordPress and
+plugins inject footer scripts, including my own `main.js`, which I enqueued with
+`$in_footer = true`. In the rendered homepage the `<script>` tag for `main.js` appears after
+the footer markup, which confirms it.
+
+## Tested
+
+### 1. Featured image on a page
+- Expected: `http://localhost/over-mij/` shows the featured image between the title and the text.
+- Actual: HTTP 200, `<div class="page-thumbnail">` is rendered with an `<img>` at 1024x768,
+  class `attachment-large size-large wp-post-image`, and `srcset` present.
+- Error: no.
+
+### 2. Alt text
+- Expected: the image has a meaningful `alt`.
+- Actual: first the `alt` was **empty**. `the_post_thumbnail()` does not invent alt text, it
+  reads the Alternative Text field of the attachment in the Media Library, which I had left
+  blank. After filling it in: `alt="Me with my girlfriend"`.
+- Error: yes, fixed. Important because my header already has a skip-link and `aria-label`,
+  so an empty alt would undercut the rest.
+
+### 3. Dynamic About section
+- Expected: the About text on the homepage comes from the Home page editor, not from the theme.
+- Actual: the text I typed in WordPress appears on the homepage as
+  `<p class="wp-block-paragraph">`. No nested `<p>` tags in the source.
+- Error: no.
+
+### 4. Footer on every page
+- Expected: contact details and copyright on both the homepage and Over mij, and `main.js`
+  loaded after the footer.
+- Actual: both correct. `main.js?ver=0.1.2` appears after the `</footer>` markup.
+- Error: no.
+
+### 5. Navigation anchors
+- Expected: `#about`, `#work` and `#contact` in the nav all point at an existing element.
+- Actual: all four ids (`main`, `about`, `work`, `contact`) exist in the rendered homepage.
+- Error: see below, `#contact` was broken first.
+
+### 6. PHP syntax
+- Expected: no syntax errors.
+- Actual: `php -l` on all six PHP files: no errors.
+
+## Issues and fixes
+
+1. **Broken `#contact` link.** Moving the Contact section from `front-page.php` to
+   `footer.php` deleted the element that had `id="contact"`, so the Contact link in my
+   navigation scrolled nowhere. I only noticed by checking the rendered HTML for the id, not
+   by looking at the page. Fix: put `id="contact"` on the `<footer>` element. Now the anchor
+   works from every page instead of only the homepage. Lesson: moving a block of HTML can
+   break something that lives in a completely different file.
+2. **Cached CSS again.** Same trap as les 2: my new `.page-thumbnail img` rule did not apply
+   until I raised the theme Version from 0.1.1 to 0.1.2, which changes `style.css?ver=`.
+   I expected this one this time.
+3. **Code style.** In a few new lines I wrote `if (have_posts())` and `esc_html(wp_date('Y'))`
+   without spaces inside the parentheses, while the rest of the theme uses the WordPress
+   style `if ( have_posts() )`. Cosmetic, still open.
+
+## Still to do
+- Remove the two temporary `TEST:` headings once les 3 and 4 are checked.
+- Make the navigation dynamic with `wp_nav_menu()` and the logo with `bloginfo( 'name' )` —
+  still open from les 2.
+- Move the Tech stack list and the projects array out of the theme files so I can edit them
+  in wp-admin.
