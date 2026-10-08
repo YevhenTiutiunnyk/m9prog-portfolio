@@ -60,11 +60,6 @@ function yevhen_get_projects()
 {
 	return array(
 		array(
-			'title'       => 'AI Helper SD',
-			'description' => 'An AI tutor for Software Development students.',
-			'stack'       => array('React', 'Express', 'Groq LLM'),
-		),
-		array(
 			'title'       => 'Storefront Bot',
 			'description' => 'A multilingual Telegram bot for a product catalogue and order processing.',
 			'stack'       => array('Python', 'aiogram', 'SQLAlchemy'),
@@ -73,6 +68,11 @@ function yevhen_get_projects()
 			'title'       => 'Spoor / Spår',
 			'description' => 'A marketing website for a 2D+3D puzzle platformer.',
 			'stack'       => array('HTML', 'CSS', 'JavaScript'),
+		),
+		array(
+			'title'       => 'A Week, Spoken',
+			'description' => 'A weekly planner you fill by dictating a phrase instead of filling in forms.',
+			'stack'       => array('Next.js', 'Postgres', 'Claude API'),
 		),
 	);
 }

@@ -1,7 +1,6 @@
 <?php get_header(); ?>
 
 <main id="main" class="site-main">
-	<h2>TEST: front-page.php</h2>
 	<section class="hero" aria-labelledby="hero-title">
 		<div class="container">
 			<p class="status">
