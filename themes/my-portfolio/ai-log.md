@@ -519,3 +519,186 @@ to travel with the theme.
 - The whole of Bootstrap is compiled in, while I use almost none of its components. Importing
   only the parts I need would cut the 227 KB a lot.
 - My own CSS and Bootstrap now partly do the same work. Worth cleaning up.
+
+# AI log — Les 6: contactformulier
+
+## Used AI
+Claude (uitleg over nonces, sanitizing/escaping en de Akismet-API, review van mijn code,
+testen van de verzending via curl en Mailpit). De PHP van het formulier heb ik zelf
+geschreven, stap voor stap. De SCSS van het formulier is door Claude geschreven nadat de
+logica af was.
+
+## Keuze: eigen implementatie
+
+De les gaf twee opties: een plugin zoals Contact Form 7, of een eigen implementatie. Ik heb
+gekozen voor een eigen formulier met Akismet erbij, omdat ik dan zelf leer hoe WordPress
+omgaat met beveiliging van formulieren. De les noemt dat deze route "na overleg" gaat.
+
+## 0. Eerst e-mail testbaar maken
+
+Mijn Docker-opstelling had geen mailserver: alleen `wordpress`, `mariadb` en `phpmyadmin`.
+`wp_mail()` zou dus altijd falen en ik zou nooit kunnen aantonen dat het formulier werkt.
+
+Toegevoegd aan `docker-compose.yml`: **Mailpit** (`axllent/mailpit`), een nep-SMTP-server die
+alles opvangt en in een webinbox op `localhost:8025` toont. Poort 1025 is SMTP, 8025 de inbox.
+Er gaat nooit echte post de deur uit.
+
+WordPress wijst naar Mailpit via de `phpmailer_init` hook in `functions.php`: PHPMailer vuurt
+die af vlak voor het verzenden, en daar zet ik `isSMTP()`, host `mailpit`, poort 1025. De
+hostnaam `mailpit` werkt omdat Docker servicenamen zelf in DNS zet.
+
+Dit is **development-configuratie**. Op een echte server hoort dit niet in een theme.
+
+## 1. Welke informatie vraag ik?
+
+| Veld | Verplicht | Waarom |
+|---|---|---|
+| Naam | ja | wie schrijft |
+| E-mail | ja | hoe ik terugmail |
+| Bedrijf | nee | nuttige context, niet nodig |
+| Bericht | ja | de boodschap zelf |
+
+Bewust **geen** telefoonnummer en **geen** adres. Elk veld dat ik opvraag is persoonsgegeven
+waar ik verantwoordelijk voor word, en elk extra veld verlaagt de kans dat iemand het
+formulier afmaakt. Dat heet dataminimalisatie (AVG).
+
+## 2. Toegankelijkheid
+
+- Elk veld heeft een `<label for="...">` dat exact matcht met de `id` van het veld. Een
+  placeholder is géén label: die verdwijnt zodra je typt en veel screenreaders slaan hem over.
+- De `*` staat in `aria-hidden="true"`. Een screenreader die "Naam ster" voorleest is ruis —
+  het `required`-attribuut vertelt dat al. Voor ziende bezoekers staat er `* verplicht veld`.
+- `autocomplete="name"`, `"email"` en `"organization"`: voor iemand met een motorische
+  beperking of dyslexie scheelt automatisch invullen echt iets.
+- De foutmelding staat in `<div role="alert">`. Een screenreader leest die **meteen** voor
+  zodra hij verschijnt, zonder dat de gebruiker ernaartoe hoeft te navigeren. Zonder dat
+  attribuut drukt een blinde bezoeker op verzenden, hoort niets, en weet niet wat er mis is.
+- De succesmelding gebruikt `role="status"` in plaats van `alert`: dat is beleefder, de
+  screenreader maakt eerst zijn zin af. Voor goed nieuws is dat passender.
+- Kleur is nergens de enige drager van betekenis: boven de lijst met fouten staat altijd
+  "Er ging iets mis:" als tekst (WCAG 1.4.1).
+
+## 3. Beveiliging
+
+Drie verschillende dingen die vaak door elkaar worden gehaald:
+
+**Nonce (CSRF).** Zonder nonce kan een willekeurige andere website een formulier hosten dat
+naar mijn site post, en een bezoeker dat ongemerkt laten versturen. `wp_nonce_field()` zet een
+eenmalig token in het formulier, `wp_verify_nonce()` controleert het.
+
+**Sanitizen = schoonmaken.** Per datatype een eigen functie: `sanitize_text_field()`,
+`sanitize_email()`, `sanitize_textarea_field()`.
+
+**Valideren = beslissen of het bruikbaar is.** Iets heel anders. Schoonmaken is geen
+controleren. Daarvoor `is_email()` en een lege-check.
+
+De regel die ik onthoud: **sanitizen bij binnenkomst, escapen bij uitvoer.** Allebei, altijd.
+En escapen hangt af van de plek: `esc_html()` tussen tags, `esc_attr()` in een attribuut,
+`esc_textarea()` in een textarea. Eén universele functie bestaat niet.
+
+`required` in de HTML is alleen gemak: dat zet je met de devtools in drie seconden uit, of je
+stuurt gewoon een curl-request zonder browser. De echte controle staat op de server.
+
+## 4. Verzenden
+
+`From` is mijn eigen adres, de bezoeker komt in `Reply-To`. Als ik het adres van de bezoeker
+in `From` zou zetten, zien mailservers dat als vervalsing en gaat de mail naar spam. Met
+`Reply-To` komt de mail van mij, maar gaat "Beantwoorden" naar de bezoeker.
+
+Na succes: `wp_safe_redirect( get_permalink() . '?sent=1' )` en `exit`. Zonder die redirect
+houdt de browser een POST vast, en betekent F5 indrukken dat de mail nóg een keer verstuurd
+wordt. Dit patroon heet Post/Redirect/Get. `wp_safe_redirect` (niet `wp_redirect`) staat alleen
+redirects naar mijn eigen domein toe. De `exit` is nodig omdat de code anders gewoon doorloopt.
+
+## 5. Akismet
+
+De sleutel staat **alleen in de database**, ingevoerd via wp-admin. Niet in een bestand, want
+alles in `themes/` gaat publiek naar GitHub en git vergeet nooit iets.
+
+`yevhen_is_spam()` in `functions.php` roept `Akismet::http_post( Akismet::build_query( $request ),
+'comment-check' )` aan met `comment_type => 'contact-form'`. Als de plugin uit staat of de
+sleutel ontbreekt, geeft de functie `false` terug: een spamfilter dat bij een storing iedereen
+blokkeert is erger dan geen spamfilter.
+
+De controle staat in de handler, vóór het verzenden en ná de lege-check. Eerst had ik hem in
+de HTML gezet — zie fouten hieronder.
+
+**Privacy:** Akismet stuurt het IP-adres, e-mailadres en bericht van de bezoeker naar
+Automattic in de VS. Dat is doorgifte van persoonsgegevens aan een derde partij, dus staat het
+onder het formulier benoemd. Dit is precies het punt "privacyvriendelijk" uit de opdracht.
+
+## Tested
+
+### 1. Serverside validatie zonder browser
+- Verwacht: lege velden worden geweigerd, ook als `required` wordt omzeild.
+- Werkelijk: een POST via curl (dus volledig buiten de browser om) met lege velden gaf vier
+  meldingen in een `role="alert"`-blok: beveiligingscontrole mislukt, naam, e-mail, bericht.
+- Fout: nee. Dit is het bewijs waarom serverside controle nodig is.
+
+### 2. Geldige inzending
+- Verwacht: HTTP 302 naar `?sent=1` en een mail in Mailpit.
+- Werkelijk: `302 → http://localhost/contact/?sent=1`. Mail aangekomen met
+  `From: Yevhen Portfolio <noreply@yevhent.com>` en `Reply-To: jan@bouwbedrijf.nl`.
+- Fout: nee.
+
+### 3. Spam wordt tegengehouden
+- Verwacht: een inzending met `viagra-test-123` (het officiële testwoord van Akismet) wordt
+  geweigerd en er gaat géén mail uit.
+- Werkelijk: HTTP 200 zonder redirect, melding "als spam gemarkeerd". Aantal berichten in
+  Mailpit ging van 4 naar 5 over twee tests samen — dus alleen het echte bericht is verstuurd,
+  de spam niet.
+- Fout: nee.
+
+### 4. Templatehiërarchie
+- Verwacht: `page-contact.php` wint van `page.php` omdat de slug `contact` is.
+- Werkelijk: `/contact/` toont "TEST: page-contact.php". Geen instelling nodig, alleen de
+  bestandsnaam.
+- Fout: nee.
+
+### 5. Stijlen
+- Verwacht: `.contact-form`, `.form-errors`, `.form-success` en `.form-privacy` zitten in de
+  gecompileerde CSS en de pagina laadt de nieuwe versie.
+- Werkelijk: alle vier aanwezig, pagina laadt `main.min.css?ver=0.2.2`.
+- Fout: nee.
+
+### 6. PHP-syntax
+- Werkelijk: `php -l` op alle zeven PHP-bestanden: geen fouten. Homepage, /contact/ en
+  /over-mij/ geven alle drie HTTP 200.
+
+## Issues and fixes
+
+1. **`wp_mail()` gaf `false`: "Invalid address: (From): wordpress@localhost".** Zonder
+   afzender bouwt WordPress `wordpress@` + het domein, en mijn domein is `localhost`. PHPMailer
+   weigert dat, want een domein zonder punt is geen geldig e-maildomein. Het was dus geen
+   verbindingsprobleem — er werd niet eens verbinding gezocht. Fix: `wp_mail_from` en
+   `wp_mail_from_name` filters. Op een echt domein komt dit nooit voor.
+2. **`get_header()` twee keer aangeroepen.** Bij het toevoegen van het PHP-blok bovenaan bleef
+   de oude regel staan. De hele `<head>` en navigatie werden dubbel uitgevoerd.
+3. **De buitenste `if ( isset( $_POST[...] ) )` per ongeluk verwijderd.** Daardoor liep de
+   noncecontrole bij **elk** bezoek, ook gewoon GET. `wp_verify_nonce( null, ... )` geeft
+   `false`, dus elke bezoeker zou meteen "Beveiligingscontrole mislukt" te zien krijgen.
+   Fix: twee niveaus — buitenste `if` = "is er iets verstuurd?", binnenste = "klopt het token?".
+4. **Backslashes in de mail: `Jan\'s Bouwbedrijf`.** WordPress draait zelf `addslashes()` over
+   `$_POST` heen, nog vóór mijn code. `sanitize_text_field()` haalt dat er niet af, want die
+   kijkt naar tags, niet naar escaping. Elke Nederlandse naam met een apostrof — "Jan's",
+   "'t Hart", "d'Hondt" — kwam verminkt binnen. Fix: alles door `wp_unslash()` vóór het
+   sanitizen. Daarna getest met precies zulke namen: schoon.
+5. **De Akismet-controle stond in de HTML in plaats van in de handler.** Dat werkte precies
+   omgekeerd: bij een geslaagde verzending wordt er geredirect met `exit`, dus die regel werd
+   nooit bereikt — de spam was al verstuurd. En bij een gewoon paginabezoek werd de externe
+   Akismet-API wél aangeroepen, met lege velden. De regel die ik eruit meeneem: **alle
+   verwerking hoort vóór `get_header()`, alles erna is alleen weergave.**
+6. **`sanitize_email()` gedraagt zich strenger dan ik dacht.** Op `"notanemail"` geeft die een
+   lege string terug, geen rommel. Daardoor slaat altijd de "vul je e-mail in"-tak aan en
+   vrijwel nooit de `is_email()`-tak. Niet erg, maar de melding is minder precies dan bedoeld.
+7. **`npm run prod` vanuit de verkeerde map.** `package.json` staat in de themamap, niet in de
+   repo-root. Twee mappen met bijna dezelfde naam.
+8. **Privacyalinea dubbel.** Stond er al, en werd nog een keer toegevoegd. Eén verwijderd.
+
+## Still to do
+- De `TEST:`-koppen uit `page.php`, `front-page.php` en `page-contact.php` als les 3-6 zijn
+  nagekeken.
+- Honeypot-veld als extra spamfilter: vangt simpele bots zonder dat er gegevens naar een
+  derde partij gaan.
+- Het rauwe `mailto:`-adres in de footer kan eruit nu er een formulier is — bots scrapen die.
+- `wp_nav_menu()` en `bloginfo( 'name' )` in de header, nog open sinds les 2.

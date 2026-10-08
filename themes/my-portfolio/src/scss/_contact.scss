@@ -1,0 +1,93 @@
+// Contactformulier: velden, foutmelding, succesmelding.
+// Kleuren komen uit de Bootstrap-variabelen in _variables.scss.
+
+.contact-form {
+	max-width: 40rem;
+
+	.field {
+		margin-block: $spacer * 1.25;
+	}
+
+	label {
+		display: block;
+		margin-block-end: $spacer * 0.35;
+		font-weight: 500;
+	}
+
+	input,
+	textarea {
+		width: 100%;
+		padding: $spacer * 0.6 $spacer * 0.75;
+		border: 1px solid var(--color-border);
+		border-radius: $border-radius;
+		background: var(--color-surface);
+		color: var(--color-text);
+		font: inherit;
+	}
+
+	textarea {
+		resize: vertical;
+	}
+
+	input:focus-visible,
+	textarea:focus-visible {
+		outline: 2px solid $primary;
+		outline-offset: 2px;
+		border-color: $primary;
+	}
+
+	.required {
+		color: $primary;
+	}
+
+	button[type="submit"] {
+		padding: $spacer * 0.7 $spacer * 1.5;
+		border: 0;
+		border-radius: $border-radius;
+		background: $primary;
+		color: #111;
+		font: inherit;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	button[type="submit"]:hover {
+		filter: brightness(1.1);
+	}
+}
+
+// Meldingen. De kleur is nooit de enige drager van de betekenis:
+// boven de lijst staat altijd tekst die zegt wat er aan de hand is.
+.form-errors,
+.form-success {
+	margin-block: $spacer * 1.5;
+	padding: $spacer;
+	border-inline-start: 4px solid;
+	border-radius: $border-radius;
+
+	p {
+		margin-block-start: 0;
+		font-weight: 600;
+	}
+
+	:last-child {
+		margin-block-end: 0;
+	}
+}
+
+.form-errors {
+	border-color: $danger;
+	background: rgba($danger, 0.12);
+}
+
+.form-success {
+	border-color: $success;
+	background: rgba($success, 0.12);
+}
+
+.form-privacy {
+	max-width: 40rem;
+	margin-block-start: $spacer * 1.5;
+	color: var(--color-muted);
+	font-size: 0.875rem;
+}
